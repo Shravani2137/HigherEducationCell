@@ -1,0 +1,60 @@
+CREATE TABLE IF NOT EXISTS students (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tu4f_id VARCHAR(255) UNIQUE NOT NULL,
+    date_submitted DATETIME DEFAULT CURRENT_TIMESTAMP,
+    name VARCHAR(255) NOT NULL,
+    department VARCHAR(255) NOT NULL,
+    admission_year INT NOT NULL,
+    passout_year INT NOT NULL,
+    ug_duration VARCHAR(50),
+    contact_no VARCHAR(50),
+    email VARCHAR(255),
+    applying_for VARCHAR(100),
+    higher_education BOOLEAN DEFAULT true,
+    entrance_exam_appeared BOOLEAN,
+    entrance_exam_name VARCHAR(100),
+    entrance_exam_score VARCHAR(100),
+    country VARCHAR(100),
+    institute_admitted VARCHAR(255),
+    pg_duration VARCHAR(50),
+    pg_course VARCHAR(255),
+    drive_folder_url VARCHAR(1024),
+    status ENUM('pending','partial','completed','follow_up') DEFAULT 'pending',
+    review_status ENUM('unchecked','checked') DEFAULT 'unchecked',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS documents (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT,
+    doc_type ENUM('score_card','hall_ticket','offer_letter','transcript','lor','sop','passport','visa','other'),
+    original_name VARCHAR(255),
+    file_name VARCHAR(255),
+    file_path VARCHAR(1024),
+    file_size INT,
+    mime_type VARCHAR(100),
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS alumni (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255),
+    branch VARCHAR(255),
+    passout_year INT,
+    pg_university VARCHAR(255),
+    pg_course VARCHAR(255),
+    pg_country VARCHAR(100),
+    pg_city VARCHAR(100),
+    current_company VARCHAR(255),
+    designation VARCHAR(255),
+    email VARCHAR(255),
+    linkedin_url VARCHAR(1024),
+    phone VARCHAR(50),
+    willing_to_mentor BOOLEAN DEFAULT true,
+    areas_of_help JSON,
+    photo_url VARCHAR(1024),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
