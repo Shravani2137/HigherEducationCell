@@ -5,18 +5,25 @@ const upload = require('../middleware/upload');
 const auth = require('../middleware/auth');
 const driveService = require('../services/driveService');
 const emailService = require('../services/emailService');
+const excelService = require('../services/excelService');
+const aiVerificationService = require('../services/aiVerificationService');
 const fs = require('fs');
 const path = require('path');
 
 // Determine status based on documents provided
 const calculateStatus = (files, body) => {
-    const examAppeared = body.entrance_exam_appeared === 'Yes' || body.entrance_exam_appeared === 'true' || body.entrance_exam_appeared === true || body.appearedForExam === 'Yes' || body.appearedForExam === 'true' || body.appearedForExam === true;
     const hasOfferLetter = (files.offer_letter && files.offer_letter.length > 0) || (files.offerLetter && files.offerLetter.length > 0);
     const hasScoreCard = (files.score_card && files.score_card.length > 0) || (files.scoreCard && files.scoreCard.length > 0);
-    
-    if (hasOfferLetter && hasScoreCard) return 'completed';
-    if (hasOfferLetter || hasScoreCard) return 'partial';
-    if (examAppeared) return 'partial';
+    const hasHallTicket = (files.hall_ticket && files.hall_ticket.length > 0) || (files.hallTicket && files.hallTicket.length > 0);
+    const hasAnyDoc = hasOfferLetter || hasScoreCard || hasHallTicket || (files.transcript && files.transcript.length > 0) || (files.other_docs && files.other_docs.length > 0) || (files.otherDocs && files.otherDocs.length > 0);
+
+    // 1. COMPLETED: Both admission offer letter AND exam document (Score Card or Hall Ticket) uploaded
+    if (hasOfferLetter && (hasScoreCard || hasHallTicket)) return 'completed';
+
+    // 2. PARTIAL: At least one document uploaded (e.g. Score Card only, Hall Ticket only, or Offer Letter only)
+    if (hasAnyDoc) return 'partial';
+
+    // 3. PENDING: Submitted info but no documents attached yet
     return 'pending';
 };
 
@@ -39,8 +46,8 @@ router.post('/', upload.fields([
         const tu4f_id = req.body.tu4f_id || req.body.tu4fId;
         const name = req.body.name;
         const department = req.body.department;
-        const admission_year = req.body.admission_year || req.body.admissionYear || null;
-        const passout_year = req.body.passout_year || req.body.passoutYear || null;
+        const admission_year = parseInt(req.body.admission_year || req.body.admissionYear) || (new Date().getFullYear() - 4);
+        const passout_year = parseInt(req.body.passout_year || req.body.passoutYear) || new Date().getFullYear();
         const ug_duration = req.body.ug_duration || req.body.ugDuration || null;
         const contact_no = req.body.contact_no || req.body.contactNo || null;
         const email = req.body.email;
@@ -58,10 +65,18 @@ router.post('/', upload.fields([
             return res.status(400).json({ message: 'TU4F ID, Name, and Department are required.' });
         }
 
-        // Check if student exists
-        const [existing] = await connection.query('SELECT id FROM students WHERE tu4f_id = ?', [tu4f_id]);
-        if (existing.length > 0) {
-            return res.status(400).json({ message: `Student with TU4F ID "${tu4f_id}" already exists.` });
+        // Check if student with same TU4F ID exists
+        const [existingId] = await connection.query('SELECT id FROM students WHERE tu4f_id = ?', [tu4f_id]);
+        if (existingId.length > 0) {
+            return res.status(400).json({ message: `Student with TU4F ID "${tu4f_id}" has already submitted an application.` });
+        }
+
+        // Check if student with same Email exists
+        if (email) {
+            const [existingEmail] = await connection.query('SELECT id FROM students WHERE email = ?', [email]);
+            if (existingEmail.length > 0) {
+                return res.status(400).json({ message: `An application has already been submitted using the email address "${email}".` });
+            }
         }
 
         const status = calculateStatus(req.files || {}, req.body);
@@ -81,19 +96,40 @@ router.post('/', upload.fields([
             driveFolderUrl = `/uploads/${folderName}`;
         }
 
+        // AI Document Verification
+        let aiScoreExtracted = null;
+        let aiVerificationStatus = 'unverified';
+        let aiVerificationNotes = '';
+
+        const scoreCardFiles = (req.files && (req.files.score_card || req.files.scoreCard)) || [];
+        if (scoreCardFiles.length > 0 && entrance_exam_score) {
+            const scoreCardFile = scoreCardFiles[0];
+            const aiResult = await aiVerificationService.verifyScoreCardDocument(
+                scoreCardFile.buffer,
+                scoreCardFile.mimetype,
+                entrance_exam_name,
+                entrance_exam_score
+            );
+            aiScoreExtracted = aiResult.extractedScore;
+            aiVerificationStatus = aiResult.verificationStatus;
+            aiVerificationNotes = aiResult.verificationNotes;
+        }
+
         // Insert student
         const [result] = await connection.query(`
             INSERT INTO students (
                 tu4f_id, name, department, admission_year, passout_year,
                 ug_duration, contact_no, email, applying_for, higher_education,
                 entrance_exam_appeared, entrance_exam_name, entrance_exam_score,
-                country, institute_admitted, pg_duration, pg_course, drive_folder_url, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                country, institute_admitted, pg_duration, pg_course, drive_folder_url,
+                ai_score_extracted, ai_verification_status, ai_verification_notes, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             tu4f_id, name, department, admission_year, passout_year,
             ug_duration, contact_no, email, applying_for, higher_education,
             entrance_exam_appeared, entrance_exam_name, entrance_exam_score,
-            country, institute_admitted, pg_duration, pg_course, driveFolderUrl, status
+            country, institute_admitted, pg_duration, pg_course, driveFolderUrl,
+            aiScoreExtracted, aiVerificationStatus, aiVerificationNotes, status
         ]);
 
         const studentId = result.insertId;
@@ -141,6 +177,9 @@ router.post('/', upload.fields([
         }
 
         await connection.commit();
+
+        // Auto-sync master Excel file directly to Google Drive
+        excelService.syncMasterExcelToDrive().catch(err => console.error('Error syncing Excel to Drive:', err));
 
         // Send automated confirmation email asynchronously
         emailService.sendSubmissionConfirmation({
@@ -307,6 +346,9 @@ router.patch('/:id/status', auth, async (req, res) => {
         params.push(req.params.id);
         await pool.query(`UPDATE students SET ${updates.join(', ')} WHERE id = ?`, params);
         
+        // Auto-sync updated records to Master Excel on Google Drive
+        excelService.syncMasterExcelToDrive().catch(err => console.error('Error syncing Excel to Drive:', err));
+
         res.json({ message: 'Status updated successfully' });
     } catch (error) {
         console.error(error);
@@ -328,6 +370,10 @@ router.put('/:id', auth, async (req, res) => {
         const values = Object.values(updateData);
         
         await pool.query(`UPDATE students SET ${setClause} WHERE id = ?`, [...values, req.params.id]);
+        
+        // Auto-sync updated records to Master Excel on Google Drive
+        excelService.syncMasterExcelToDrive().catch(err => console.error('Error syncing Excel to Drive:', err));
+
         res.json({ message: 'Student updated successfully' });
     } catch (error) {
         console.error(error);

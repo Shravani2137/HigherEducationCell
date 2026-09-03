@@ -125,7 +125,7 @@ const StudentFormPage = () => {
           {step === 1 && (
             <div className="form-grid animate-fadeIn">
               <div className="form-group">
-                <label className="form-label">TU4F ID *</label>
+                <label className="form-label">TUF ID *</label>
                 <input type="text" className="input" name="tu4fId" value={formData.tu4fId} onChange={handleInputChange} required placeholder="e.g. TU4F2021001" />
               </div>
               <div className="form-group">

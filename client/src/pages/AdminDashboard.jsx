@@ -64,10 +64,10 @@ const AdminDashboard = () => {
     fetchDashboardData();
   };
 
-  const markAsChecked = async (id, currentReviewed) => {
+  const markAsChecked = async (id, isChecked) => {
     try {
-      await updateStudentStatus(id, { isReviewed: !currentReviewed });
-      toast.success(currentReviewed ? 'Marked as unreviewed' : 'Marked as reviewed');
+      await updateStudentStatus(id, { review_status: isChecked ? 'unchecked' : 'checked' });
+      toast.success(isChecked ? 'Marked as unchecked' : 'Marked as checked');
       fetchDashboardData();
     } catch (error) {
       toast.error('Failed to update status');
@@ -145,6 +145,10 @@ const AdminDashboard = () => {
             <option value="IT">IT</option>
             <option value="CS">CS</option>
             <option value="EXTC">EXTC</option>
+            <option value="MECH">MECH</option>
+            <option value="CIVIL">CIVIL</option>
+            <option value="AI-DS">AI-DS</option>
+            <option value="AI-ML">AI-ML</option>
           </select>
         </div>
         
@@ -173,7 +177,8 @@ const AdminDashboard = () => {
                 <th>ID / Name</th>
                 <th>Dept</th>
                 <th>Target</th>
-                <th>Exam</th>
+                <th>Exam & Score</th>
+                <th>AI Check</th>
                 <th>Status</th>
                 <th>Review</th>
                 <th>Actions</th>
@@ -181,57 +186,95 @@ const AdminDashboard = () => {
             </thead>
             <tbody>
               {students.length === 0 ? (
-                <tr><td colSpan="7" className="text-center py-8">No students found</td></tr>
+                <tr><td colSpan="8" className="text-center py-8">No students found</td></tr>
               ) : (
-                students.map(student => (
-                  <tr key={student._id} className={`row-${student.isReviewed ? 'checked' : student.status}`}>
-                    <td>
-                      <div className="font-medium">{student.tu4fId}</div>
-                      <div className="text-xs text-text-secondary">{student.name}</div>
-                    </td>
-                    <td>{student.department}</td>
-                    <td>
-                      {student.pursuingHigherEd === 'Yes' ? (
-                        <>
-                          <div>{student.country}</div>
-                          <div className="text-xs text-text-secondary">{student.applyingFor}</div>
-                        </>
-                      ) : 'No'}
-                    </td>
-                    <td>
-                      {student.appearedForExam === 'Yes' ? (
-                        <>
-                          <div>{student.examName}</div>
-                          <div className="text-xs text-text-secondary">Score: {student.examScore}</div>
-                        </>
-                      ) : 'No'}
-                    </td>
-                    <td>
-                      <StatusBadge status={student.status} />
-                    </td>
-                    <td>
-                      <button 
-                        onClick={() => markAsChecked(student._id, student.isReviewed)}
-                        className={`btn btn-sm ${student.isReviewed ? 'btn-ghost text-status-blue' : 'btn-ghost'}`}
-                        title={student.isReviewed ? "Mark as unreviewed" : "Mark as reviewed"}
-                      >
-                        <FiCheck className={student.isReviewed ? "text-xl" : "text-xl opacity-30"} />
-                      </button>
-                    </td>
-                    <td className="flex gap-2 items-center">
-                      <Link to={`/admin/student/${student.id || student._id}`} className="btn btn-secondary py-1 px-3 text-xs">
-                        View
-                      </Link>
-                      <button 
-                        onClick={() => handleSendReminder(student.id || student._id, student.name)}
-                        className="btn btn-ghost py-1 px-2 text-xs"
-                        title="Send Document Reminder Email"
-                      >
-                        <FiMail className="text-base text-accent-purple" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                students.map(student => {
+                  const studentId = student.id || student._id;
+                  const tu4fId = student.tu4f_id || student.tu4fId;
+                  const isChecked = student.review_status === 'checked' || student.isReviewed;
+                  const pursuing = student.higher_education === 1 || student.higher_education === true || student.pursuingHigherEd === 'Yes';
+                  const examAppeared = student.entrance_exam_appeared === 1 || student.entrance_exam_appeared === true || student.appearedForExam === 'Yes';
+                  const examName = student.entrance_exam_name || student.examName;
+                  const examScore = student.entrance_exam_score || student.examScore;
+                  const applyingFor = student.applying_for || student.applyingFor;
+                  const aiStatus = student.ai_verification_status || 'unverified';
+                  const aiNotes = student.ai_verification_notes || '';
+
+                  return (
+                    <tr key={studentId} className={isChecked ? 'row-checked' : `row-${student.status}`}>
+                      <td>
+                        <div className="font-medium text-accent-purple">{tu4fId}</div>
+                        <div className="text-sm font-semibold">{student.name}</div>
+                        <div className="text-xs text-text-secondary">{student.email}</div>
+                      </td>
+                      <td>
+                        <span className="badge badge-dept">{student.department}</span>
+                      </td>
+                      <td>
+                        {pursuing ? (
+                          <>
+                            <div className="font-medium">{student.country || 'India'}</div>
+                            <div className="text-xs text-text-secondary">{applyingFor || 'N/A'} {student.institute_admitted ? `(${student.institute_admitted})` : ''}</div>
+                          </>
+                        ) : (
+                          <span className="text-xs text-text-muted">Not Pursuing</span>
+                        )}
+                      </td>
+                      <td>
+                        {examAppeared ? (
+                          <>
+                            <div className="font-medium text-accent-teal">{examName || 'Exam Taken'}</div>
+                            <div className="text-xs text-text-secondary">Score: {examScore || 'Submitted'}</div>
+                          </>
+                        ) : (
+                          <span className="text-xs text-text-muted">No Exam</span>
+                        )}
+                      </td>
+                      <td>
+                        {aiStatus === 'verified' ? (
+                          <span className="px-2 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400 font-medium inline-flex items-center gap-1" title={aiNotes}>
+                            🟢 Verified
+                          </span>
+                        ) : aiStatus === 'discrepancy_detected' ? (
+                          <span className="px-2 py-1 text-xs rounded-full bg-rose-500/20 text-rose-400 font-medium inline-flex items-center gap-1" title={aiNotes}>
+                            ⚠️ Mismatch!
+                          </span>
+                        ) : aiStatus === 'manual_check_needed' ? (
+                          <span className="px-2 py-1 text-xs rounded-full bg-amber-500/20 text-amber-400 font-medium inline-flex items-center gap-1" title={aiNotes}>
+                            🔍 Review
+                          </span>
+                        ) : (
+                          <span className="text-xs text-text-muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <StatusBadge status={student.status} />
+                      </td>
+                      <td>
+                        <button 
+                          onClick={() => markAsChecked(studentId, isChecked)}
+                          className={`btn btn-sm ${isChecked ? 'btn-ghost text-status-blue font-bold' : 'btn-ghost opacity-60'}`}
+                          title={isChecked ? "Mark as unchecked" : "Mark as checked"}
+                        >
+                          <FiCheck className={isChecked ? "text-xl text-blue-400" : "text-xl"} />
+                          <span className="text-xs ml-1">{isChecked ? 'Checked' : 'Check'}</span>
+                        </button>
+                      </td>
+                      <td className="flex gap-2 items-center">
+                        <Link to={`/admin/student/${studentId}`} className="btn btn-secondary py-1 px-3 text-xs">
+                          View
+                        </Link>
+                        <button 
+                          onClick={() => handleSendReminder(studentId, student.name)}
+                          className="btn btn-ghost py-1 px-2 text-xs"
+                          title="Send Document Reminder Email"
+                        >
+                          <FiMail className="text-base text-accent-purple" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -34,6 +34,6 @@ export const login = (credentials) => api.post('/auth/login', credentials);
 export const verifyToken = () => api.get('/auth/verify');
 
 // Export API
-export const downloadExcel = () => api.get('/students/export', { responseType: 'blob' });
+export const downloadExcel = () => api.get('/export/excel', { responseType: 'blob' });
 
 export default api;

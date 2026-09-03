@@ -34,7 +34,7 @@ const StudentDetail = () => {
 
   const handleUpdate = async () => {
     try {
-      await updateStudentStatus(id, { status, adminNotes: notes });
+      await updateStudentStatus(id, { status, notes });
       toast.success('Student details updated');
       fetchStudent();
     } catch (error) {
@@ -54,8 +54,24 @@ const StudentDetail = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
-  if (!student) return <div className="p-8 text-center">Student not found</div>;
+  if (loading) return <div className="p-8 text-center text-text-secondary">Loading student details...</div>;
+  if (!student) return <div className="p-8 text-center text-text-secondary">Student not found</div>;
+
+  const tu4fId = student.tu4f_id || student.tu4fId;
+  const admissionYear = student.admission_year || student.admissionYear;
+  const passoutYear = student.passout_year || student.passoutYear;
+  const contactNo = student.contact_no || student.contactNo;
+  const pursuing = student.higher_education === 1 || student.higher_education === true || student.pursuingHigherEd === 'Yes';
+  const applyingFor = student.applying_for || student.applyingFor;
+  const pgCourse = student.pg_course || student.pgCourse;
+  const instituteAdmitted = student.institute_admitted || student.instituteAdmitted;
+  const examAppeared = student.entrance_exam_appeared === 1 || student.entrance_exam_appeared === true || student.appearedForExam === 'Yes';
+  const examName = student.entrance_exam_name || student.examName;
+  const examScore = student.entrance_exam_score || student.examScore;
+  const aiStatus = student.ai_verification_status || 'unverified';
+  const aiScore = student.ai_score_extracted;
+  const aiNotes = student.ai_verification_notes;
+  const driveUrl = student.drive_folder_url;
 
   return (
     <div className="dashboard">
@@ -65,12 +81,22 @@ const StudentDetail = () => {
             <FiArrowLeft /> Back to Dashboard
           </button>
           <h1 className="text-3xl font-heading mb-2">{student.name}</h1>
-          <div className="flex gap-3 items-center">
-            <span className="text-text-secondary">{student.tu4fId}</span>
+          <div className="flex gap-3 items-center flex-wrap">
+            <span className="text-accent-purple font-medium">{tu4fId}</span>
             <span className="text-text-secondary">•</span>
-            <span className="text-text-secondary">{student.department}</span>
+            <span className="badge badge-dept">{student.department}</span>
             <span className="text-text-secondary">•</span>
             <StatusBadge status={student.status} />
+            {driveUrl && (
+              <a 
+                href={driveUrl.startsWith('http') ? driveUrl : `http://localhost:5000${driveUrl}`} 
+                target="_blank" 
+                rel="noreferrer"
+                className="btn btn-secondary py-1 px-3 text-xs ml-2"
+              >
+                📁 Open Drive / Folder
+              </a>
+            )}
           </div>
         </div>
         
@@ -88,11 +114,11 @@ const StudentDetail = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-text-secondary">Admission Year</p>
-                <p className="font-medium">{student.admissionYear}</p>
+                <p className="font-medium">{admissionYear || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-text-secondary">Passout Year</p>
-                <p className="font-medium">{student.passoutYear}</p>
+                <p className="font-medium">{passoutYear || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-text-secondary">Email</p>
@@ -100,30 +126,30 @@ const StudentDetail = () => {
               </div>
               <div>
                 <p className="text-sm text-text-secondary">Contact</p>
-                <p className="font-medium">{student.contactNo || 'N/A'}</p>
+                <p className="font-medium">{contactNo || 'N/A'}</p>
               </div>
             </div>
           </div>
 
           <div className="card">
             <h3 className="text-xl font-heading mb-4 border-b border-border-color pb-2">Higher Education Goals</h3>
-            {student.pursuingHigherEd === 'Yes' ? (
+            {pursuing ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-text-secondary">Target Country</p>
-                  <p className="font-medium">{student.country}</p>
+                  <p className="font-medium">{student.country || 'India'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Applying For</p>
-                  <p className="font-medium">{student.applyingFor}</p>
+                  <p className="font-medium">{applyingFor || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Target Course</p>
-                  <p className="font-medium">{student.pgCourse}</p>
+                  <p className="font-medium">{pgCourse || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-text-secondary">Institute Admitted</p>
-                  <p className="font-medium">{student.instituteAdmitted || 'Not yet'}</p>
+                  <p className="font-medium">{instituteAdmitted || 'Not yet admitted'}</p>
                 </div>
               </div>
             ) : (
@@ -132,16 +158,52 @@ const StudentDetail = () => {
           </div>
 
           <div className="card">
-            <h3 className="text-xl font-heading mb-4 border-b border-border-color pb-2">Entrance Exams</h3>
-            {student.appearedForExam === 'Yes' ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-text-secondary">Exam Name</p>
-                  <p className="font-medium">{student.examName}</p>
+            <h3 className="text-xl font-heading mb-4 border-b border-border-color pb-2">Entrance Exams & AI Verification</h3>
+            {examAppeared ? (
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-text-secondary">Exam Name</p>
+                    <p className="font-medium">{examName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-text-secondary">Entered Score</p>
+                    <p className="font-medium">{examScore || 'N/A'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-text-secondary">Score</p>
-                  <p className="font-medium">{student.examScore}</p>
+
+                {/* AI Verification Box */}
+                <div className="p-4 rounded-lg bg-surface-light border border-border-color mt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-sm flex items-center gap-2">
+                      🤖 AI Document Verification Status:
+                    </span>
+                    {aiStatus === 'verified' ? (
+                      <span className="px-2 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400 font-semibold">
+                        ✅ Score Verified
+                      </span>
+                    ) : aiStatus === 'discrepancy_detected' ? (
+                      <span className="px-2 py-1 text-xs rounded-full bg-rose-500/20 text-rose-400 font-semibold">
+                        ⚠️ Discrepancy / Mismatch
+                      </span>
+                    ) : aiStatus === 'manual_check_needed' ? (
+                      <span className="px-2 py-1 text-xs rounded-full bg-amber-500/20 text-amber-400 font-semibold">
+                        🔍 Manual Review Required
+                      </span>
+                    ) : (
+                      <span className="text-xs text-text-muted">Unverified</span>
+                    )}
+                  </div>
+                  {aiScore && (
+                    <p className="text-xs text-text-secondary mb-1">
+                      <strong>AI Extracted Score:</strong> <span className="text-accent-teal font-medium">{aiScore}</span>
+                    </p>
+                  )}
+                  {aiNotes && (
+                    <p className="text-xs text-text-secondary italic">
+                      {aiNotes}
+                    </p>
+                  )}
                 </div>
               </div>
             ) : (
@@ -152,9 +214,9 @@ const StudentDetail = () => {
 
         <div className="flex flex-col gap-6">
           <div className="card">
-            <h3 className="text-xl font-heading mb-4 border-b border-border-color pb-2">Status Management</h3>
+            <h3 className="text-xl font-heading mb-4 border-b border-border-color pb-2">Status & Review Management</h3>
             <div className="status-manager">
-              <div className="form-group mb-0">
+              <div className="form-group mb-4">
                 <label className="form-label">Update Status</label>
                 <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
                   <option value="pending">Pending</option>
@@ -164,6 +226,13 @@ const StudentDetail = () => {
                 </select>
               </div>
               
+              <div className="form-group mb-4">
+                <label className="form-label">Review Status</label>
+                <p className="text-sm font-medium mb-2">
+                  {student.review_status === 'checked' ? '🔵 Marked as Checked' : '⬜ Unchecked'}
+                </p>
+              </div>
+
               <div className="form-group mb-0">
                 <label className="form-label">Admin Notes</label>
                 <textarea 
@@ -175,24 +244,32 @@ const StudentDetail = () => {
                 ></textarea>
               </div>
               
-              <button onClick={handleUpdate} className="btn btn-primary w-full justify-center mt-2">
+              <button onClick={handleUpdate} className="btn btn-primary w-full justify-center mt-4">
                 <FiSave /> Save Changes
               </button>
             </div>
           </div>
 
           <div className="card">
-            <h3 className="text-xl font-heading mb-4 border-b border-border-color pb-2">Documents</h3>
-            {student.documents && Object.keys(student.documents).length > 0 ? (
+            <h3 className="text-xl font-heading mb-4 border-b border-border-color pb-2">Uploaded Documents</h3>
+            {student.documents && student.documents.length > 0 ? (
               <ul className="doc-list">
-                {Object.entries(student.documents).map(([key, url]) => (
-                  <li key={key} className="doc-item">
-                    <div className="doc-name capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
-                    <a href={`http://localhost:5000/${url}`} target="_blank" rel="noreferrer" className="btn btn-ghost py-1 px-2">
-                      <FiDownload />
-                    </a>
-                  </li>
-                ))}
+                {student.documents.map((doc) => {
+                  const docPath = doc.file_path.startsWith('http') 
+                    ? doc.file_path 
+                    : `http://localhost:5000/${doc.file_path}`;
+                  return (
+                    <li key={doc.id} className="doc-item flex items-center justify-between p-2 rounded border border-border-color mb-2">
+                      <div>
+                        <div className="font-medium text-sm capitalize">{doc.doc_type.replace(/_/g, ' ')}</div>
+                        <div className="text-xs text-text-secondary">{doc.original_name}</div>
+                      </div>
+                      <a href={docPath} target="_blank" rel="noreferrer" className="btn btn-ghost py-1 px-2" title="Download / View">
+                        <FiDownload />
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-text-secondary text-sm">No documents uploaded</p>
