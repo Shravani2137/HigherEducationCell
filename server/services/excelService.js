@@ -2,6 +2,8 @@ const exceljs = require('exceljs');
 const pool = require('../config/db');
 const driveService = require('./driveService');
 
+let masterSync = Promise.resolve();
+
 /**
  * Generates formatted Excel workbook buffer for all student records
  */
@@ -109,28 +111,33 @@ async function generateExcelBuffer() {
  * Auto-syncs the master Excel file directly to Google Drive parent folder
  */
 async function syncMasterExcelToDrive() {
-    try {
-        const buffer = await generateExcelBuffer();
-        const parentFolderId = process.env.HEC_PARENT_FOLDER_ID;
+    const sync = masterSync.then(async () => {
+        try {
+            const buffer = await generateExcelBuffer();
+            const parentFolderId = process.env.HEC_PARENT_FOLDER_ID;
 
-        const fakeFile = {
-            originalname: 'HEC_Master_Student_Data.xlsx',
-            mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            buffer: buffer
-        };
+            const masterFile = {
+                originalname: 'HEC_Master_Student_Data.xlsx',
+                mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                buffer
+            };
 
-        const result = await driveService.uploadFileToDriveFolder(fakeFile, parentFolderId, '');
-        if (result) {
-            console.log(`Auto-synced Master Excel to Google Drive: ${result.webViewLink}`);
-            return result.webViewLink;
-        } else {
-            console.log('Master Excel updated locally (Google Drive parent folder not configured yet).');
+            const result = await driveService.upsertFileInDriveFolder(masterFile, parentFolderId);
+            if (result) {
+                console.log(`Auto-synced Master Excel to Google Drive: ${result.webViewLink}`);
+                return result.webViewLink;
+            }
+
+            console.log('Master Excel was generated locally, but Google Drive sync was skipped or failed.');
+            return null;
+        } catch (error) {
+            console.error('Error auto-syncing Master Excel to Drive:', error.message);
             return null;
         }
-    } catch (error) {
-        console.error('Error auto-syncing Master Excel to Drive:', error.message);
-        return null;
-    }
+    });
+
+    masterSync = sync.catch(() => null);
+    return sync;
 }
 
 module.exports = {

@@ -10,18 +10,31 @@ const ExportButton = () => {
     try {
       setLoading(true);
       const response = await downloadExcel();
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      if (!(response.data instanceof Blob) || response.data.type.includes('application/json')) {
+        const message = response.data instanceof Blob
+          ? await response.data.text()
+          : 'The server did not return a valid Excel file.';
+        let errorMessage = 'The server did not return a valid Excel file.';
+        try {
+          errorMessage = JSON.parse(message).message || errorMessage;
+        } catch {}
+        throw new Error(errorMessage);
+      }
+
+      const url = window.URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `HEC_Students_${new Date().toISOString().split('T')[0]}.xlsx`);
+      link.download = 'HEC_Master_Student_Data.xlsx';
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
       
-      toast.success('Export successful');
+      toast.success('Excel downloaded successfully');
     } catch (error) {
-      toast.error('Failed to export data');
+      toast.error(error.message || error.response?.data?.message || 'Failed to export data');
       console.error('Export error:', error);
     } finally {
       setLoading(false);

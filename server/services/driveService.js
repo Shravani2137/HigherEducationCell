@@ -8,7 +8,10 @@ let drive = null;
 // Initialize Google Drive API client
 function initDriveClient() {
     try {
-        const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, '../../credentials/service-account-key.json');
+        const configuredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+        const credentialsPath = configuredPath
+            ? (path.isAbsolute(configuredPath) ? configuredPath : path.resolve(__dirname, '../..', configuredPath))
+            : path.join(__dirname, '../../credentials/service-account-key.json');
         
         if (fs.existsSync(credentialsPath)) {
             const auth = new google.auth.GoogleAuth({
@@ -108,6 +111,76 @@ async function uploadFileToDriveFolder(file, folderId, docTypePrefix = '') {
 }
 
 /**
+ * Creates the file once, then updates that same file on subsequent syncs.
+ * @param {Object} file - Express multer-compatible file object
+ * @param {string} folderId - Target Google Drive folder ID
+ * @returns {Promise<{ id: string, name: string, webViewLink: string } | null>}
+ */
+async function upsertFileInDriveFolder(file, folderId) {
+    if (!folderId) {
+        console.log('Google Drive parent folder is not configured. Skipping master file sync.');
+        return null;
+    }
+
+    if (!drive) {
+        const reInit = initDriveClient();
+        if (!reInit) return null;
+    }
+
+    try {
+        const escapedName = file.originalname.replace(/'/g, "\\'");
+        const existing = await drive.files.list({
+            q: `'${folderId}' in parents and name = '${escapedName}' and trashed = false`,
+            fields: 'files(id, name, webViewLink)',
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
+            corpora: 'allDrives',
+        });
+
+        const bufferStream = new Readable({ read() {} });
+        bufferStream.push(file.buffer);
+        bufferStream.push(null);
+
+        const media = {
+            mimeType: file.mimetype,
+            body: bufferStream,
+        };
+
+        const currentFile = existing.data.files[0];
+        if (currentFile) {
+            const response = await drive.files.update({
+                fileId: currentFile.id,
+                media,
+                fields: 'id, name, webViewLink',
+                supportsAllDrives: true,
+            });
+
+            for (const duplicate of existing.data.files.slice(1)) {
+                await drive.files.delete({ fileId: duplicate.id, supportsAllDrives: true });
+            }
+
+            console.log(`Updated master Excel file in Google Drive: ${response.data.id}`);
+            return response.data;
+        }
+
+        const response = await drive.files.create({
+            requestBody: {
+                name: file.originalname,
+                parents: [folderId],
+            },
+            media,
+            fields: 'id, name, webViewLink',
+            supportsAllDrives: true,
+        });
+        console.log(`Created master Excel file in Google Drive: ${response.data.id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error upserting file in Google Drive:', error.message);
+        return null;
+    }
+}
+
+/**
  * Share a folder with a specific email
  * @param {string} folderId 
  * @param {string} userEmail 
@@ -141,5 +214,6 @@ module.exports = {
     initDriveClient,
     createStudentDriveFolder,
     uploadFileToDriveFolder,
+    upsertFileInDriveFolder,
     shareDriveFolder
 };
