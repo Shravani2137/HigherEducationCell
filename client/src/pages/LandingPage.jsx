@@ -11,6 +11,7 @@ const LandingPage = () => {
         <div className="shape shape-2"></div>
         
         <div className="hero-content">
+          <img src="/hec-logo.svg" alt="Terna Higher Education Cell official logo" className="hero-logo" />
           <h1 className="hero-title">
             Terna Engineering College
             <br />

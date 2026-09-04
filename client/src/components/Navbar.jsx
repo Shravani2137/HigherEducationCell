@@ -12,7 +12,8 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="nav-container">
         <NavLink to="/" className="nav-brand">
-          <span className="text-gradient">TEC</span> HEC
+          <img src="/hec-logo.svg" alt="Terna Higher Education Cell" className="nav-logo" />
+          <span>HEC Portal</span>
         </NavLink>
         
         <div className={`nav-links ${isOpen ? 'active' : ''}`}>

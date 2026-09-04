@@ -1,6 +1,8 @@
 const exceljs = require('exceljs');
 const pool = require('../config/db');
 const driveService = require('./driveService');
+const fs = require('fs');
+const path = require('path');
 
 let masterSync = Promise.resolve();
 
@@ -9,11 +11,23 @@ let masterSync = Promise.resolve();
  */
 async function generateExcelBuffer() {
     const [students] = await pool.query('SELECT * FROM students ORDER BY created_at DESC');
+    const [documents] = await pool.query(`
+        SELECT id, student_id, doc_type, original_name, file_name, file_path, file_size, mime_type
+        FROM documents
+        ORDER BY student_id, uploaded_at, id
+    `);
+    const documentsByStudent = new Map();
 
-    for (const student of students) {
-        const [docs] = await pool.query('SELECT COUNT(*) as docCount FROM documents WHERE student_id = ?', [student.id]);
-        student.document_count = docs[0].docCount;
-    }
+    documents.forEach((document) => {
+        const studentDocuments = documentsByStudent.get(document.student_id) || [];
+        studentDocuments.push(document);
+        documentsByStudent.set(document.student_id, studentDocuments);
+    });
+
+    students.forEach((student) => {
+        student.documents = documentsByStudent.get(student.id) || [];
+        student.document_count = student.documents.length;
+    });
 
     const workbook = new exceljs.Workbook();
     workbook.creator = 'TEC Higher Education Cell';
@@ -39,10 +53,12 @@ async function generateExcelBuffer() {
         { header: 'PG Duration', key: 'pg_duration', width: 14 },
         { header: 'PG Course', key: 'pg_course', width: 20 },
         { header: 'Documents Uploaded', key: 'documents', width: 18 },
+        { header: 'Drive Folder', key: 'drive_folder', width: 24 },
         { header: 'Status', key: 'status', width: 14 },
         { header: 'Review Status', key: 'review_status', width: 14 },
         { header: 'Notes', key: 'notes', width: 30 },
     ];
+    worksheet.autoFilter = 'A1:S1';
 
     // Style header row
     const headerRow = worksheet.getRow(1);
@@ -71,13 +87,30 @@ async function generateExcelBuffer() {
             institute_admitted: student.institute_admitted || '',
             pg_duration: student.pg_duration || '',
             pg_course: student.pg_course || '',
-            documents: `${student.document_count} file(s)`,
+            documents: student.document_count ? `${student.document_count} file(s) - See Uploaded Files` : '0 files',
+            drive_folder: student.drive_folder_url ? {
+                text: 'Open folder',
+                hyperlink: student.drive_folder_url,
+            } : '',
             status: student.status ? (student.status.charAt(0).toUpperCase() + student.status.slice(1).replace('_', ' ')) : 'Pending',
             review_status: student.review_status === 'checked' ? '✅ Checked' : '⬜ Unchecked',
             notes: student.notes || '',
         });
 
         row.alignment = { vertical: 'middle' };
+
+        if (student.documents.length > 0) {
+            const documentCell = row.getCell('documents');
+            const firstDocument = student.documents[0];
+            documentCell.value = {
+                text: `${student.document_count} file(s) - Open files`,
+                hyperlink: `#'Uploaded Files'!A${documents.findIndex((document) => document.id === firstDocument.id) + 2}`,
+            };
+            documentCell.font = { color: { argb: 'FF0563C1' }, underline: true };
+        }
+        if (student.drive_folder_url) {
+            row.getCell('drive_folder').font = { color: { argb: 'FF0563C1' }, underline: true };
+        }
 
         // Color coding
         if (student.review_status === 'checked') {
@@ -94,6 +127,74 @@ async function generateExcelBuffer() {
     });
 
     worksheet.eachRow((row) => {
+        row.eachCell((cell) => {
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                right: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+            };
+        });
+    });
+
+    const filesWorksheet = workbook.addWorksheet('Uploaded Files', {
+        views: [{ state: 'frozen', ySplit: 1 }],
+    });
+    filesWorksheet.columns = [
+        { header: 'Student ID', key: 'student_id', width: 18 },
+        { header: 'Student Name', key: 'student_name', width: 25 },
+        { header: 'Document Type', key: 'doc_type', width: 18 },
+        { header: 'Original File Name', key: 'original_name', width: 34 },
+        { header: 'File Size', key: 'file_size', width: 14 },
+        { header: 'Open File', key: 'file_link', width: 20 },
+        { header: 'Preview', key: 'preview', width: 18 },
+    ];
+    filesWorksheet.autoFilter = 'A1:G1';
+
+    const fileHeaderRow = filesWorksheet.getRow(1);
+    fileHeaderRow.font = { name: 'Calibri', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    fileHeaderRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF167D9A' } };
+    fileHeaderRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    fileHeaderRow.height = 28;
+
+    const publicServerUrl = (process.env.PUBLIC_SERVER_URL || process.env.SERVER_URL || 'http://localhost:5000').replace(/\/$/, '');
+    const studentById = new Map(students.map((student) => [student.id, student]));
+
+    documents.forEach((document) => {
+        const student = studentById.get(document.student_id);
+        const storedPath = document.file_path || '';
+        const fileUrl = /^https?:\/\//i.test(storedPath)
+            ? storedPath
+            : `${publicServerUrl}/${storedPath.replace(/^\/+/, '').replace(/\\/g, '/')}`;
+        const fileRow = filesWorksheet.addRow({
+            student_id: student?.tu4f_id || document.student_id,
+            student_name: student?.name || '',
+            doc_type: document.doc_type || 'other',
+            original_name: document.original_name || document.file_name || 'Uploaded file',
+            file_size: document.file_size ? `${Math.ceil(document.file_size / 1024)} KB` : '',
+            file_link: { text: 'Open file', hyperlink: fileUrl },
+            preview: '',
+        });
+
+        fileRow.alignment = { vertical: 'middle', wrapText: true };
+        fileRow.getCell('file_link').font = { color: { argb: 'FF0563C1' }, underline: true };
+
+        const localFilePath = !/^https?:\/\//i.test(storedPath)
+            ? path.resolve(__dirname, '..', storedPath)
+            : null;
+        if (localFilePath && fs.existsSync(localFilePath) && /^image\/(png|jpeg|jpg)$/i.test(document.mime_type || '')) {
+            const extension = document.mime_type.toLowerCase().includes('png') ? 'png' : 'jpeg';
+            const imageId = workbook.addImage({ filename: localFilePath, extension });
+            filesWorksheet.addImage(imageId, {
+                tl: { col: 6, row: fileRow.number - 1 },
+                ext: { width: 100, height: 75 },
+            });
+            fileRow.height = 60;
+            fileRow.getCell('preview').value = 'Embedded image';
+        }
+    });
+
+    filesWorksheet.eachRow((row) => {
         row.eachCell((cell) => {
             cell.border = {
                 top: { style: 'thin', color: { argb: 'FFE0E0E0' } },

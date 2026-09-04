@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-labelledby="title desc">
+  <title id="title">Terna Higher Education Cell</title>
+  <desc id="desc">Official Higher Education Cell emblem with a shield, crown and gold laurel.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#252a45"/><stop offset="1" stop-color="#11131d"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8ca55"/><stop offset="1" stop-color="#bd7620"/></linearGradient>
+  </defs>
+  <rect width="600" height="600" rx="48" fill="url(#bg)"/>
+  <circle cx="300" cy="300" r="245" fill="#151419"/>
+  <g fill="none" stroke="url(#gold)" stroke-width="12" stroke-linecap="round">
+    <path d="M176 156c-73 67-85 188-27 277"/><path d="M424 156c73 67 85 188 27 277"/>
+  </g>
+  <g fill="url(#gold)">
+    <ellipse cx="153" cy="202" rx="12" ry="33" transform="rotate(-48 153 202)"/><ellipse cx="132" cy="250" rx="12" ry="34" transform="rotate(-68 132 250)"/><ellipse cx="130" cy="302" rx="12" ry="34" transform="rotate(-87 130 302)"/><ellipse cx="148" cy="355" rx="12" ry="34" transform="rotate(-112 148 355)"/><ellipse cx="181" cy="400" rx="12" ry="34" transform="rotate(-132 181 400)"/>
+    <ellipse cx="447" cy="202" rx="12" ry="33" transform="rotate(48 447 202)"/><ellipse cx="468" cy="250" rx="12" ry="34" transform="rotate(68 468 250)"/><ellipse cx="470" cy="302" rx="12" ry="34" transform="rotate(87 470 302)"/><ellipse cx="452" cy="355" rx="12" ry="34" transform="rotate(112 452 355)"/><ellipse cx="419" cy="400" rx="12" ry="34" transform="rotate(132 419 400)"/>
+  </g>
+  <path d="M300 78l12 24 27 4-20 19 5 27-24-13-24 13 5-27-20-19 27-4z" fill="url(#gold)"/>
+  <path d="M300 120l72 26 17 70-14 105-75 87-75-87-14-105 17-70z" fill="#151419" stroke="#f5f5f5" stroke-width="8"/>
+  <path d="M300 137l56 20 12 61-12 94-56 65-56-65-12-94 12-61z" fill="#17171b" stroke="#f5f5f5" stroke-width="5"/>
+  <text x="300" y="211" text-anchor="middle" fill="url(#gold)" font-family="Georgia,serif" font-size="58" font-weight="bold">H</text>
+  <text x="300" y="261" text-anchor="middle" fill="url(#gold)" font-family="Georgia,serif" font-size="58" font-weight="bold">E</text>
+  <text x="300" y="311" text-anchor="middle" fill="url(#gold)" font-family="Georgia,serif" font-size="58" font-weight="bold">C</text>
+  <text x="300" y="485" text-anchor="middle" fill="url(#gold)" font-family="Georgia,serif" font-size="22" letter-spacing="2">TERNA</text>
+  <text x="300" y="519" text-anchor="middle" fill="url(#gold)" font-family="Georgia,serif" font-size="30" font-weight="bold">HIGHER</text>
+  <text x="300" y="551" text-anchor="middle" fill="url(#gold)" font-family="Georgia,serif" font-size="25" font-weight="bold">EDUCATION CELL</text>
+</svg>

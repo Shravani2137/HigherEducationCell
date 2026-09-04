@@ -43,9 +43,11 @@ const ExportButton = () => {
 
   return (
     <button 
-      className="btn btn-secondary" 
+      className="btn btn-export" 
       onClick={handleExport}
       disabled={loading}
+      title="Download student data with uploaded file links"
+      aria-label={loading ? 'Preparing Excel export' : 'Download Excel with uploaded file links'}
     >
       <FiDownload /> {loading ? 'Exporting...' : 'Export Excel'}
     </button>
