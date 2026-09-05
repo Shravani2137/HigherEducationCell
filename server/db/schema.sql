@@ -1,8 +1,10 @@
 CREATE TABLE IF NOT EXISTS students (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    application_id VARCHAR(40) UNIQUE,
     tu4f_id VARCHAR(255) UNIQUE NOT NULL,
     date_submitted DATETIME DEFAULT CURRENT_TIMESTAMP,
     name VARCHAR(255) NOT NULL,
+    university VARCHAR(255),
     department VARCHAR(255) NOT NULL,
     admission_year INT NOT NULL,
     passout_year INT NOT NULL,
@@ -22,11 +24,25 @@ CREATE TABLE IF NOT EXISTS students (
     ai_score_extracted VARCHAR(100),
     ai_verification_status ENUM('unverified', 'verified', 'discrepancy_detected', 'manual_check_needed') DEFAULT 'unverified',
     ai_verification_notes TEXT,
-    status ENUM('pending','partial','completed','follow_up') DEFAULT 'pending',
+    ai_verification_result JSON,
+    ai_confidence DECIMAL(5,2),
+    ai_issues JSON,
+    status ENUM('submitted','under_review','correction_required','approved','rejected','pending','partial','completed','follow_up') DEFAULT 'submitted',
     review_status ENUM('unchecked','checked') DEFAULT 'unchecked',
     notes TEXT,
+    correction_reason TEXT,
+    correction_token_hash CHAR(64),
+    correction_token_expires_at DATETIME,
+    correction_requested_at DATETIME,
+    correction_used_at DATETIME,
+    approved_at DATETIME,
+    rejected_at DATETIME,
+    drive_folder_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_students_status (status),
+    INDEX idx_students_passout_year (passout_year),
+    INDEX idx_students_correction_token (correction_token_hash)
 );
 
 CREATE TABLE IF NOT EXISTS documents (
@@ -38,7 +54,13 @@ CREATE TABLE IF NOT EXISTS documents (
     file_path VARCHAR(1024),
     file_size INT,
     mime_type VARCHAR(100),
+    ocr_text LONGTEXT,
+    ocr_result JSON,
+    ai_verification_result JSON,
+    verification_status ENUM('unverified','pass','warning','mismatch','manual_review') DEFAULT 'unverified',
+    admin_verification_status ENUM('pending','verified','rejected') DEFAULT 'pending',
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 );
 
@@ -59,5 +81,7 @@ CREATE TABLE IF NOT EXISTS alumni (
     willing_to_mentor BOOLEAN DEFAULT true,
     areas_of_help JSON,
     photo_url VARCHAR(1024),
+    source_student_id INT UNIQUE,
+    alumni_status ENUM('active','inactive') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

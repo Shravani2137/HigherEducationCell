@@ -1,33 +1,27 @@
-/* Form Page */
 .form-page {
+  min-height: calc(100vh - 72px);
   padding: 3rem 1rem;
-  min-height: calc(100vh - 60px);
-  display: flex;
-  justify-content: center;
+  background: var(--bg-dark);
 }
-
 .form-container {
   width: 100%;
-  max-width: 800px;
+  max-width: 860px;
+  margin: 0 auto;
 }
-
-/* Progress Indicator */
 .stepper {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 3rem;
+  margin: 2.5rem 0 3rem;
   position: relative;
 }
 .stepper::before {
-  content: '';
+  content: "";
   position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
+  top: 17px;
+  left: 4%;
+  right: 4%;
+  height: 1px;
   background: var(--border-color);
-  z-index: 0;
-  transform: translateY(-50%);
 }
 .step {
   position: relative;
@@ -35,87 +29,127 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
+  min-width: 70px;
 }
 .step-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--bg-surface);
-  border: 2px solid var(--border-color);
+  width: 35px;
+  height: 35px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  transition: all var(--transition-normal);
+  border: 1px solid #b9c9d8;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 .step.active .step-circle {
-  border-color: var(--accent-blue);
-  background: rgba(59, 130, 246, 0.2);
-  color: var(--accent-blue);
-  box-shadow: 0 0 15px rgba(59,130,246,0.3);
+  border-color: var(--accent-teal);
+  color: #fff;
+  background: var(--accent-teal);
 }
 .step.completed .step-circle {
-  border-color: var(--status-green);
-  background: var(--status-green);
-  color: white;
+  border-color: var(--accent-navy);
+  color: #fff;
+  background: var(--accent-navy);
 }
 .step-label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  position: absolute;
-  top: 100%;
-  margin-top: 0.5rem;
-  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 .step.active .step-label {
-  color: var(--text-primary);
-  font-weight: 500;
+  color: var(--accent-navy);
 }
-
-/* Form Layout */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-@media (max-width: 600px) {
-  .form-grid { grid-template-columns: 1fr; }
+  gap: 1.3rem 1.5rem;
 }
 .form-grid-full {
-  grid-column: 1 / -1;
+  grid-column: 1/-1;
 }
-
 .form-actions {
   display: flex;
   justify-content: space-between;
+  gap: 1rem;
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-color);
 }
-
 .review-section {
-  background: rgba(0,0,0,0.2);
-  border-radius: 8px;
-  padding: 1.5rem;
   margin-bottom: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: #f8fafc;
 }
 .review-item {
   display: flex;
-  margin-bottom: 0.75rem;
-  border-bottom: 1px dashed rgba(255,255,255,0.1);
-  padding-bottom: 0.5rem;
+  gap: 1rem;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px dashed #d9e3eb;
 }
-.review-label { width: 40%; color: var(--text-secondary); }
-.review-value { width: 60%; font-weight: 500; }
-
+.review-item:last-child {
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+.review-label {
+  width: 40%;
+  color: var(--text-secondary);
+}
+.review-value {
+  width: 60%;
+  font-weight: 600;
+}
 .success-container {
-  text-align: center;
+  max-width: 650px;
+  margin: 4rem auto;
   padding: 4rem 2rem;
+  text-align: center;
 }
 .success-icon {
-  font-size: 4rem;
+  display: block;
+  margin: 0 auto 1rem;
   color: var(--status-green);
-  margin-bottom: 1rem;
-  animation: pulse 2s infinite;
+  font-size: 4rem;
+}
+@media (max-width: 600px) {
+  .form-page {
+    padding: 2rem 0.75rem;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .form-grid-full {
+    grid-column: auto;
+  }
+  .stepper {
+    margin: 2rem 0 2.5rem;
+  }
+  .step-label {
+    max-width: 60px;
+    overflow: hidden;
+    text-align: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .form-actions {
+    flex-wrap: wrap;
+  }
+  .form-actions .btn {
+    flex: 1;
+  }
+  .review-item {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .review-label,
+  .review-value {
+    width: 100%;
+  }
 }
