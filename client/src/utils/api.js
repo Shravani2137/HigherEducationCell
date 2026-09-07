@@ -48,7 +48,6 @@ export const submitCorrection = (token, data) =>
   api.post(`/students/correction/${token}`, data);
 
 // Export API
-export const downloadExcel = () =>
-  api.get("/export/excel", { responseType: "blob" });
+export const downloadExcel = () => api.get("/export/excel");
 
 export default api;
