@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FiArrowLeft, FiPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -24,11 +24,7 @@ const AdminAlumni = () => {
     willingToMentor: false
   });
 
-  useEffect(() => {
-    fetchAlumni();
-  }, []);
-
-  const fetchAlumni = async () => {
+  const fetchAlumni = useCallback(async () => {
     try {
       const res = await getAlumni({});
       setAlumni(res.data.data || res.data);
@@ -37,7 +33,11 @@ const AdminAlumni = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAlumni();
+  }, [fetchAlumni]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

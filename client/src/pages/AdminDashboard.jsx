@@ -1,12 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import {
-  FiSearch,
-  FiFilter,
-  FiCheck,
-  FiMoreVertical,
-  FiMail,
-} from "react-icons/fi";
+import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
+import { FiSearch, FiCheck, FiMail } from "react-icons/fi";
 import toast from "react-hot-toast";
 import {
   getStudents,
@@ -36,7 +30,7 @@ const AdminDashboard = () => {
     search: "",
   });
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const [studentsRes, statsRes] = await Promise.all([
@@ -54,7 +48,7 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -64,7 +58,7 @@ const AdminDashboard = () => {
     if (isAuthenticated) {
       fetchDashboardData();
     }
-  }, [isAuthenticated, filters.status, filters.ai_status, filters.department]); // Debounced search in real app
+  }, [isAuthenticated, fetchDashboardData]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -74,7 +68,8 @@ const AdminDashboard = () => {
       setIsAuthenticated(true);
       toast.success("Logged in successfully");
     } catch (error) {
-      toast.error("Invalid credentials");
+      console.error("Admin login failed:", error);
+      toast.error(error.response?.data?.message || "Unable to reach the login service");
     }
   };
 

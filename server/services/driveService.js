@@ -1,9 +1,11 @@
 const { google } = require("googleapis");
 const fs = require("fs");
+const path = require("path");
 const { Readable } = require("stream");
 const driveOAuth = require("./driveOAuth");
 
 let drive = null;
+let driveAuthMode = null;
 
 // ============================================================
 // GET HEC PARENT FOLDER ID
@@ -27,43 +29,58 @@ function getParentFolderId() {
 
 // ============================================================
 // INITIALIZE GOOGLE DRIVE API CLIENT
-// USING OAUTH 2.0
+// USING THE CONFIGURED SERVICE ACCOUNT
 // ============================================================
 
 function initDriveClient() {
   try {
-    const auth = driveOAuth.getAuthenticatedOAuthClient();
+    const oauthClient = driveOAuth.getAuthenticatedOAuthClient();
 
-    if (!auth) {
-      console.log("⚠️ Google Drive OAuth token not found.");
-
-      console.log("Please authorize Google Drive using:");
-
-      console.log("http://localhost:5000/api/auth/google");
-
-      drive = null;
-
-      return false;
+    if (oauthClient) {
+      drive = google.drive({
+        version: "v3",
+        auth: oauthClient,
+      });
+      driveAuthMode = "oauth";
+      console.log("✅ Google Drive API client initialized with OAuth.");
+      return true;
     }
+
+    const configuredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    const credentialsPath = configuredPath
+      ? path.isAbsolute(configuredPath)
+        ? configuredPath
+        : path.resolve(__dirname, "../../", configuredPath)
+      : path.resolve(__dirname, "../../credentials/service-account-key.json");
+
+    if (!fs.existsSync(credentialsPath)) {
+      throw new Error(`Service account credentials not found: ${credentialsPath}`);
+    }
+
+    const auth = new google.auth.GoogleAuth({
+      keyFile: credentialsPath,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
 
     drive = google.drive({
       version: "v3",
       auth,
     });
+    driveAuthMode = "service-account";
 
     console.log(
-      "✅ Google Drive API client initialized successfully with OAuth 2.0.",
+      "✅ Google Drive API client initialized with the service account.",
     );
 
     return true;
   } catch (error) {
     console.error(
-      "❌ Google Drive OAuth initialization failed:",
+      "❌ Google Drive service-account initialization failed:",
       error.message,
     );
 
     drive = null;
-
+    driveAuthMode = null;
     return false;
   }
 }
@@ -210,6 +227,20 @@ async function findOrCreateFolder(name, parentId) {
     console.error("API Error:", error.response?.data || error.message);
 
     return null;
+  }
+}
+
+async function verifyUploadLocation(folderId) {
+  const response = await drive.files.get({
+    fileId: folderId,
+    fields: "id,name,mimeType,driveId",
+    supportsAllDrives: true,
+  });
+
+  if (driveAuthMode === "service-account" && !response.data.driveId) {
+    throw new Error(
+      "Service accounts cannot upload files to My Drive. Move HEC_PARENT_FOLDER_ID to a Shared Drive or authorize Google Drive with OAuth.",
+    );
   }
 }
 
@@ -478,6 +509,8 @@ async function uploadLocalFileToFolder(
       return null;
     }
 
+    await verifyUploadLocation(folderId);
+
     const buffer = fs.readFileSync(filePath);
 
     console.log(`✅ File read successfully: ${buffer.length} bytes`);
@@ -605,6 +638,8 @@ async function uploadFileToDriveFolder(file, folderId, docTypePrefix = "") {
     if (docTypePrefix) {
       console.log(`📌 Prefix: ${docTypePrefix}`);
     }
+
+    await verifyUploadLocation(folderId);
 
     const fileName = docTypePrefix
       ? `${docTypePrefix}_${file.originalname}`

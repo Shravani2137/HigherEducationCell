@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiDownload, FiTrash2, FiSave } from "react-icons/fi";
 import toast from "react-hot-toast";
@@ -22,11 +22,7 @@ const StudentDetail = () => {
   const [status, setStatus] = useState("");
   const [addAlumni, setAddAlumni] = useState(false);
 
-  useEffect(() => {
-    fetchStudent();
-  }, [id]);
-
-  const fetchStudent = async () => {
+  const fetchStudent = useCallback(async () => {
     try {
       const res = await getStudent(id);
       const data = res.data.data || res.data;
@@ -39,7 +35,11 @@ const StudentDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchStudent();
+  }, [fetchStudent]);
 
   const handleUpdate = async () => {
     try {

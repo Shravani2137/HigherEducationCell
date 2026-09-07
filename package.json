@@ -15,8 +15,10 @@
     "migrate": "npm --prefix server run migrate"
   },
   "dependencies": {
+    "mammoth": "^1.12.2",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

@@ -20,6 +20,12 @@ client/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+
+GOOGLE_APPLICATION_CREDENTIALS=./credentials/service-account-key.json
+HEC_PARENT_FOLDER_ID=1gjA853wuptKvDCmr7mIbymnzqxBJikcM
+
+
 desktop.ini
 
 # Logs

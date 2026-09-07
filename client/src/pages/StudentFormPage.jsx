@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { FiChevronRight, FiChevronLeft, FiCheck } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { createStudent } from "../utils/api";

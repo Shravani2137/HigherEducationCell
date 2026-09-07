@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FiSearch,
   FiLinkedin,
@@ -36,8 +36,16 @@ const AlumniDirectory = () => {
     passout_year: "",
   });
 
-  useEffect(() => {
-    fetchAlumni();
+  const fetchAlumni = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await getAlumni(filters);
+      setAlumni(res.data.data || res.data);
+    } catch (error) {
+      console.error("Failed to fetch alumni", error);
+    } finally {
+      setLoading(false);
+    }
   }, [
     filters.country,
     filters.branch,
@@ -46,17 +54,9 @@ const AlumniDirectory = () => {
     filters.passout_year,
   ]);
 
-  const fetchAlumni = async () => {
-    try {
-      setLoading(true);
-      const res = await getAlumni(filters);
-      setAlumni(res.data.data || res.data);
-    } catch (error) {
-      console.error("Failed to fetch alumni");
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchAlumni();
+  }, [fetchAlumni]);
 
   const handleSearch = (e) => {
     e.preventDefault();

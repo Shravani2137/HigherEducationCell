@@ -14,6 +14,7 @@ const TOKEN_PATH = path.join(
 
 const REDIRECT_URI =
   process.env.GOOGLE_OAUTH_REDIRECT_URI ||
+  process.env.GOOGLE_REDIRECT_URI ||
   "http://localhost:5000/api/auth/google/callback";
 
 const DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"];

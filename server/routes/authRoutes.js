@@ -260,13 +260,13 @@ router.get("/drive-status", auth, async (req, res) => {
     res.json({
       configured: result.configured,
 
-      accessible: result.accessible,
+      accessible: result.success,
 
       folderName: result.folder?.name || null,
 
-      message: result.accessible
+      message: result.message || (result.success
         ? "Google Drive parent folder is accessible."
-        : "Google Drive parent folder is not accessible.",
+        : "Google Drive parent folder is not accessible."),
     });
   } catch (error) {
     console.error("❌ Drive status error:", error);
